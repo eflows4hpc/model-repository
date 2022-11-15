@@ -1,0 +1,54 @@
+#cloud-config
+
+# This is a cloud config that install most basic packages, and clones and prepares the git repo for the datacatalog
+# This should prepare everything that is possible, so that (after assigning the ip address and generating the static files) only docker-compose needs to be run
+
+# upgrade packages
+package_update: true
+package_upgrade: true
+
+# install relevant packages
+packages:
+  - python3
+  - python3-pip
+  - docker.io
+
+# Add users to the system. Users are added after groups are added.
+
+users:
+  - name: jj
+    gecos: jj
+    groups: sudo, docker
+    shell: /bin/bash
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    lock_passwd: true
+    ssh_authorized_keys:
+      - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCxPi4EYQLBxFOECG3m8/yv4Qq0iByEirxoVBM/BkR3nbVrCLCB7L+gKKgLL36jOnkZKHyXRcRA94or8sUHrIRKH3o4ubnCKK/j2MEojGOj90QJiV5VaZ0jaHpo8IxKuYBZQR95B+l5Jpfn02nIEq0C7pdDmuV73Igl07eakmn07EFezWKzMDFcTfU5KLx/OyTYgNfVBTUqwc0nUEKqSe/b0WmY34nHnIXDPjg+eXNDMQrAl6j8cVUeJs57lZFdDNTacoZCune3z1UZ4N3X+rQvdvZ04GjAJPAlYaaJ21eeIrAyt65A1H3bT8OFfU5vK9Fi+2uA0yqFgCooDrUQFsdF
+
+  - name: model
+    gecos: Common user for running the model repo
+    groups: sudo, docker
+    shell: /bin/bash
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    lock_passwd: true
+
+
+write_files:
+  - path: /etc/docker/daemon.json
+    permission: 0744
+    owner: root
+    content: |
+      {
+        "data-root": "/persistent_data/docker_volumes"
+      }
+
+runcmd:
+  - echo "Downloading latest version of docker-compose"
+  - sudo pip3 install docker-compose
+  - cd /home/model
+  - echo "Current user is $(whoami)"
+  - sudo -u model git clone https://gitlab.jsc.fz-juelich.de/eflows4hpc-wp2/modelrepository.git
+  - cd ./modelrepository
+  - touch /finished_cloudinit
+
+final_message: "The system is finally up, after $UPTIME seconds"

@@ -11,8 +11,6 @@ services:
            - "40000-40009/tcp"
        volumes:
            - "/data:/home/user"
-       networks:
-           - backend
 
     db:
         restart: always
@@ -27,29 +25,57 @@ services:
             - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
         volumes:
             - dbdata:/var/lib/mysql
-        networks:
-            - backend
 
     mlflow:
         restart: always
         build: .
         image: mlflow_server
         container_name: mlflow_server
+        environment:
+          LETSENCRYPT_HOST: zam10017.zam.kfa-juelich.de
+          VIRTUAL_PORT: 8080
+          VIRTUAL_HOST: zam10017.zam.kfa-juelich.de
         depends_on:
             - db
         ports:
-            - "5000:5000"
-        expose:
-            - "5000"
-        networks:
-            - backend
-            - frontend
-        command: mlflow server --backend-store-uri mysql+pymysql://${MYSQL_USER}:${MYSQL_PASSWORD}@db:3306/${MYSQL_DATABASE} --serve-artifacts --host 0.0.0.0 --artifacts-destination ftp://user:123@ftp-server/
-networks:
-    frontend:
-        driver: bridge
-    backend:
-        driver: bridge
+            - "8080:8080"
+        command: mlflow server -p 8080 --backend-store-uri mysql+pymysql://${MYSQL_USER}:${MYSQL_PASSWORD}@mlflow_db:3306/${MYSQL_DATABASE} --serve-artifacts --host 0.0.0.0 --artifacts-destination ftp://user:123@ftp-server/
+
+
+    reverse-proxy:
+      image: "jwilder/nginx-proxy:alpine"
+      container_name: "reverse-proxy"
+      volumes:
+        - "html:/usr/share/nginx/html"
+        - "dhparam:/etc/nginx/dhparam"
+        - "vhost:/etc/nginx/vhost.d"
+        - "certs:/etc/nginx/certs"
+        - "/run/docker.sock:/tmp/docker.sock:ro"
+      restart: "always"
+      ports:
+        - "80:80"
+        - "443:443"
+
+    letsencrypt:
+      image: "jrcs/letsencrypt-nginx-proxy-companion:latest"
+      container_name: "letsencrypt-helper"
+      volumes:
+        - "html:/usr/share/nginx/html"
+        - "dhparam:/etc/nginx/dhparam"
+        - "vhost:/etc/nginx/vhost.d"
+        - "certs:/etc/nginx/certs"
+        - "/run/docker.sock:/var/run/docker.sock:ro"
+      environment:
+        NGINX_PROXY_CONTAINER: "reverse-proxy"
+        DEFAULT_EMAIL: "j.rybicki@fz-juelich.de"
+      restart: "always"
+      depends_on:
+        - "reverse-proxy"
+      
 
 volumes:
-    dbdata:
+  certs:
+  html:
+  vhost:
+  dhparam:
+  dbdata:
