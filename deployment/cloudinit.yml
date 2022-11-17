@@ -1,7 +1,5 @@
 #cloud-config
 
-# This is a cloud config that install most basic packages, and clones and prepares the git repo for the datacatalog
-# This should prepare everything that is possible, so that (after assigning the ip address and generating the static files) only docker-compose needs to be run
 
 # upgrade packages
 package_update: true
@@ -32,10 +30,11 @@ users:
     sudo: ALL=(ALL) NOPASSWD:ALL
     lock_passwd: true
 
+mounts:
+  - [ /dev/vdb, /persistent_data, "auto", "defaults,nofail", "0", "0" ]
 
 write_files:
   - path: /etc/docker/daemon.json
-    permission: 0744
     owner: root
     content: |
       {
@@ -43,16 +42,14 @@ write_files:
       }
 
 runcmd:
-  - systemctl stop docker.service && systemctl stop docker.socket
-  - echo "/dev/vdb /persistent_data brtfs defaults 0 0" | sudo tee -a /etc/fstab
-  - reboot 
+  - mount /persistent_data
+  - systemctl restart docker.service
   - echo "Downloading latest version of docker-compose"
   - sudo pip3 install docker-compose
   - cd /home/model
   - echo "Current user is $(whoami)"
   - sudo -u model git clone https://gitlab.jsc.fz-juelich.de/eflows4hpc-wp2/modelrepository.git
   - cd ./modelrepository/deployment
-  - docker-compose up -d
   - touch /finished_cloudinit
 
 final_message: "The system is finally up, after $UPTIME seconds"
