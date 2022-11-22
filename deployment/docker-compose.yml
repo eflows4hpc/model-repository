@@ -75,6 +75,8 @@ services:
 
 volumes:
   certs:
+    external: true
+    name: persistent_certs
   html:
   vhost:
   dhparam:
