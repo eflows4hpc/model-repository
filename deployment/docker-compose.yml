@@ -10,7 +10,7 @@ services:
            - "20-21/tcp"
            - "40000-40009/tcp"
        volumes:
-           - "/data:/home/user"
+         - ftpdata:/home/user
 
     db:
         restart: always
@@ -81,3 +81,8 @@ volumes:
   vhost:
   dhparam:
   dbdata:
+    external: true
+    name: persistent_db
+  ftpdata:
+    external: true
+    name: external_ftp
