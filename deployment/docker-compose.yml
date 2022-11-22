@@ -11,6 +11,7 @@ services:
            - "40000-40009/tcp"
        volumes:
          - ftpdata:/home/user
+       profiles: ["ftp"]
 
     db:
         restart: always
@@ -39,7 +40,9 @@ services:
             - db
         ports:
             - "8080:8080"
-        command: mlflow server -p 8080 --backend-store-uri mysql+pymysql://${MYSQL_USER}:${MYSQL_PASSWORD}@mlflow_db:3306/${MYSQL_DATABASE} --serve-artifacts --host 0.0.0.0 --artifacts-destination ftp://user:123@ftp-server/
+        volumes:
+            -mlflowdata:/data/
+        command: mlflow server -p 8080 --backend-store-uri mysql+pymysql://${MYSQL_USER}:${MYSQL_PASSWORD}@mlflow_db:3306/${MYSQL_DATABASE} --serve-artifacts --host 0.0.0.0 --artifacts-destination /data/
 
 
     reverse-proxy:
@@ -86,3 +89,6 @@ volumes:
   ftpdata:
     external: true
     name: external_ftp
+  mlflowdata:
+    external: true
+    name: external_mlflow
