@@ -1,0 +1,217 @@
+:toc-title: Table of Contents
+:toc:
+
+// configure EN settings for asciidoc
+include::src/config.adoc[]
+
+// numbering from here on
+:numbered:
+
+[[section-introduction-and-goals]]
+== Introduction and Goals
+
+Following describes the architecture of eFlows4HPC Model Repository Service. The service
+provides scientific users with a means to track the metadata describing their Machine Learning/AI experiments and to store the actual models along.
+
+Main features:
+
+* keep track of experiments' parameters,
+* keep track of experiment results (metrics),
+* store and share serialized models.
+
+=== Requirements Overview
+
+[cols="1,2,4"]
+|===
+| **ID** | **Requirement** | **Explanation**
+| R1 | Store serialized models | Enable storage of models for the sake of visibility of the created project results
+| R2 | Enable download of models | It should be possible to download stored models and deployment them locally
+| R3 | Store and browse parameters | Keep track of all the information required to repeat/reproduce the experiment made
+| R4 | Store and browse metrics | Provide description of model performance
+|===
+
+=== Quality Goals
+
+[cols="1,1,1,4"]
+|===
+| **ID** | **Prio**| **Quality**| **Explanation**
+| Q1 | 1 | Reliability | Model storage should be backend up
+| Q2 | 3 | Extensibility/Interoperability | New kinds of models' serializations should be supported
+| Q3 | 2 | Transparency/Reproducibility | Other researchers should be able to verify and redo the model training and compare obtained performance metrics
+|===
+
+[[section-architecture-constraints]]
+== Architecture Constrains
+
+
+[cols="1,4"]
+|===
+| **Constraint** | **Explanation**
+| Offline training | Model training in HPC context happens often on offline nodes, the models along the parameters and metrics need to be transferred to the model repo
+| Support project libraries | There are some Python ML libraries used in the project they should be supported by the model repo
+|===
+
+
+[[section-system-scope-and-context]]
+== System Scope and Context
+
+=== Business Context
+
+image:bc.png["Business view"]
+
+=== Technical Context
+
+image:model-comp.png["Technical L1 view"]
+
+**Mapping Input/Output to Channels**
+
+User -> Model Repository: HTTP UI
+
+On-line node -> Model Repository (real-time): HTTP-based, synchron API
+
+DLS -> Off-line node (mode transfer): SSH
+
+DLS -> Model Repository: API (Python client library)
+
+
+[[section-solution-strategy]]
+== Solution Strategy
+
+Fundamental decisions and solutions strategies.
+
+=== MLFlow
+MLFlow is a model repository that allows to store and retrieve information about the experiments runs (parameters and metrics).
+It provides a UI to view and analyze the data. MLFlow can be integrated with different backend storages to store the serialized
+models (e.g. S3, sftp, etc). For the first attempt we will use local storage on a OpenStack volume, providing basic data safety. MLFlow can be extended to support various flavours of models and also supports ONNYX pretty universal ML model serialization
+format. The MLFlow instance will be open.
+
+=== Online model creation
+For the online mode creation (i.e., when the machine used for training can access the MLFlow directly), the MLFlow client API can
+be used. The communication is synchronous and instant. Typical use case here is to use Jupyter notebook for the interactive training.
+
+=== Offline mode creation
+Some of the model creation is done on HPC systems where compute nodes do not have the liberty to access internet directly. In such
+situations MLFlow client libraries can be used to store the metadata (parameters and  metrics) and the serialized models locally.
+Subsequently, the models will be transferred to the central MLFlow repository. This is done by the Data Logistics Service which
+is used to stage out any results. The DLS pipeline for transferring the local results to the use MLFlow client libraries similar to the online case.
+
+=== Deployment 
+
+Deployment of the MLFlow instance will be done on the available IaaS OpenStack cloud solution. Automatic deployment from Gitlab repository is done with GitLab pipelines.
+
+[[section-building-block-view]]
+
+== Building Block View
+
+image:model-comp.png["Technical L1 view"]
+
+=== Model Repository UI
+Web interface to browse collected information about experiments, runs, metadata parameters and metrics, and actual models.
+
+_Interfaces_
+Primary interface is the web view, but there is also CLI used to interact with the Model Repository.
+
+_Fulfilled Requirements_
+
+* Enable download of models (R2)
+* Store parameters and metrics (R3, R4)
+
+Qualities:
+
+* Transparency/Reproducibility (Q3)
+
+
+_Open Issues/Problems/Risks_
+
+
+=== Tracking server
+This component keeps track of metadata parameters and metrics.
+
+_Interfaces_
+HTTP-based API and client libraries.
+
+.Tracking Example
+[source,Python]
+----
+import numpy as np
+from sklearn.linear_model import LogisticRegression
+
+import mlflow
+import mlflow.sklearn
+
+mlflow.set_tracking_uri('https://zam10017.zam.kfa-juelich.de/')
+mlflow.set_experiment('mysimple')
+
+for c in range(1,100, 20):
+    with mlflow.start_run():
+        C = float(c)/100.0
+        mlflow.log_param('C', value=C)
+        lr = LogisticRegression(C=C)
+        lr.fit(X, y)
+        score = lr.score(X, y)
+        print(f"{C} score: {score}")
+        mlflow.log_metric("score", score)
+----
+
+_Fulfilled Requirements_
+* Store parameters
+* Store metrics
+
+Quality:
+Transparency
+
+_Open Issues/Problems/Risks_
+
+
+=== Backend storage
+The storage of models is separated from storage of metadata. It is possible to extended mlflow to support
+specific storage solution. Out-of-the-box there is a support for numerous (Cloud) storages. MLFlow can either
+forward storage requests or work as a storage proxy (``--serve-artifacts``).
+
+The storage also requires model serialization there are again some of the formats already supported and
+there is a possibility to define own searalization strategies.
+
+The storage can store not only models but also ``artifacts`` like plots, etc.
+
+.Model storage Example
+[source,Python]
+----
+from sklearn.linear_model import LogisticRegression
+
+lr = LogisticRegression(C=C)
+mlflow.sklearn.log_model(lr, "model")
+
+fig, axs = plt.subplots(1)
+axs.scatter(X, y,c='r', label='data')
+axs.plot(X, my, label='prediction')
+
+fig.legend();
+
+mlflow.log_figure(fig, 'myplot.png')
+----
+
+
+_Interfaces_
+
+The storage should not be available to the users directly in our case. Only through UI, client APIs.
+
+
+_Quality/Performance Characteristics_
+
+* Store serialized models
+* Enable downloads of models
+
+Extensibility: possibility to integrate different storages and accommodate various serialization functions.
+
+
+=== Data Logistics Model Transfer Pipeline
+The pipeline will be run in the stage out phase of a workflow run. After a model, its parameters and performance metrics
+were stored on an off-line compute node. The pipeline will then take all the information from the local storage (through SSH access
+which is enabled to the off-line compute nodes) and transfer this to the central model repository.
+
+
+_Fulfilled Requirements_
+Support offline use case.
+
+
+
