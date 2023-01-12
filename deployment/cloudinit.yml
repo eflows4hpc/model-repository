@@ -40,6 +40,14 @@ write_files:
       {
         "data-root": "/persistent_data/docker_volumes"
       }
+  - path: /home/model/env
+    owner: model
+    content: |
+      MYSQL_DATABASE=mlflow
+      MYSQL_USER=root
+      MYSQL_PASSWORD=SOME_PASS
+      MYSQL_ROOT_PASSWORD=SOME_ROOT_PASS
+        
 
 runcmd:
   - mount /persistent_data
@@ -50,6 +58,7 @@ runcmd:
   - echo "Current user is $(whoami)"
   - sudo -u model git clone https://gitlab.jsc.fz-juelich.de/eflows4hpc-wp2/modelrepository.git
   - cd ./modelrepository/deployment
+  - docker-compose up -d
   - touch /finished_cloudinit
 
 final_message: "The system is finally up, after $UPTIME seconds"
