@@ -59,11 +59,11 @@ runcmd:
   - sudo pip3 install docker-compose
   - cd /home/model
   - echo "Current user is $(whoami)"
-  - sudo -u model git clone https://gitlab.jsc.fz-juelich.de/eflows4hpc-wp2/modelrepository.git
+  - git clone https://gitlab.jsc.fz-juelich.de/eflows4hpc-wp2/modelrepository.git
   - cd ./modelrepository/deployment
   - cp /env /.env
-  - docker-compose up -d
-  - docker-compose restart
+  - docker-compose down
+  - docker-compose up -d 
   - touch /finished_cloudinit
 
 final_message: "The system is finally up, after $UPTIME seconds"
