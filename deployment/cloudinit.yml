@@ -1,5 +1,8 @@
 #cloud-config
-
+apt:
+  primary:
+    - arches: [default]
+      uri: http://de.archive.ubuntu.com/ubuntu/
 
 # upgrade packages
 package_update: true
@@ -60,6 +63,7 @@ runcmd:
   - cd ./modelrepository/deployment
   - cp /env /.env
   - docker-compose up -d
+  - docker-compose restart
   - touch /finished_cloudinit
 
 final_message: "The system is finally up, after $UPTIME seconds"
