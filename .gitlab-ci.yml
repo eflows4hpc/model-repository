@@ -19,7 +19,7 @@ variables:
 stages:
   - deploy
   - test-deployment
-  - cleanup
+  - publish
 
 
 full-deploy-production:
