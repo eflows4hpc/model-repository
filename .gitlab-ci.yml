@@ -8,7 +8,7 @@ variables:
   OS_REGION_NAME: "HDFCloud"
   OS_INTERFACE: public
   PRODUCTION_IP: 134.94.199.17
-  PRODUCTION_NAME: model_repo
+  PRODUCTION_NAME: model-repo
   VOLUME_ID: 615f3f9d-ec7d-4860-8d65-6121ec5e01fc
 
 # before script copied from gitlab docs
@@ -33,7 +33,7 @@ full-deploy-production:
     - pip install python-openstackclient
     - sed -i "s/SOME_PASS/$DB_PASS/" deployment/cloudinit.yml
     - sed -i "s/SOME_ROOT_PASS/$DB_ROOT_PASS/" deployment/cloudinit.yml
-    - INSTANCE_ID=`openstack server create -f value -c id --prefix IMAGE_ --flavor s2 --image 0cdff7de-8777-492b-8b38-b6a628c266d4 --user-data deployment/cloudinit.yml --security-group ssh --security-group www --security-group https model-repo`
+    - INSTANCE_ID=`openstack server create -f value -c id --prefix IMAGE_ --flavor s2 --image 0cdff7de-8777-492b-8b38-b6a628c266d4 --user-data deployment/cloudinit.yml --security-group ssh --security-group www --security-group https $PRODUCTION_NAME`
     - echo "Instance $INSTANCE_ID created"
     - while [ "`openstack server show $INSTANCE_ID -c addresses -f value`" = "{}" ]; do sleep 5; done # wait until an address is available to attach the floating ip
     - echo "Attaching $PRODUCTION_IP to $INSTANCE_ID"
