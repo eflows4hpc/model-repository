@@ -42,3 +42,18 @@ full-deploy-production:
     - openstack server add volume $INSTANCE_ID $VOLUME_ID
     - sleep 20 # apparently it may take some time until the volume is available to the OS
 
+publishgit-do:
+  stage: publish
+  only:
+    - tags
+  tags: [stable]
+  script:
+    - apt-get update 
+    - apt-get install -y git
+    - (git remote rm gith) || echo "Not found"
+    - (git remote -v | grep gith) || git remote add gith "https://${GITHUB_USER}:${GITHUB_TOKEN}@github.com/eflows4hpc/model-repository.git"
+    - git remote -v
+    - git fetch --unshallow origin
+    - git push gith +HEAD:refs/heads/main
+
+
