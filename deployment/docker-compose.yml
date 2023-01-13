@@ -41,7 +41,7 @@ services:
         ports:
             - "8080:8080"
         volumes:
-            -mlflowdata:/data/
+            - mlflowdata:/data/
         command: mlflow server -p 8080 --backend-store-uri mysql+pymysql://${MYSQL_USER}:${MYSQL_PASSWORD}@mlflow_db:3306/${MYSQL_DATABASE} --serve-artifacts --host 0.0.0.0 --artifacts-destination /data/
 
 
