@@ -62,8 +62,10 @@ runcmd:
   - git clone https://gitlab.jsc.fz-juelich.de/eflows4hpc-wp2/modelrepository.git
   - cd ./modelrepository/deployment
   - cp /env ./.env
+  - docker-compose build
   - docker-compose down
   - docker-compose up -d 
   - touch /finished_cloudinit
+  - cloud-init clean --logs
 
 final_message: "The system is finally up, after $UPTIME seconds"
