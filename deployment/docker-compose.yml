@@ -58,7 +58,7 @@ services:
         - "vhost:/etc/nginx/vhost.d"
         - "certs:/etc/nginx/certs"
         - "/run/docker.sock:/tmp/docker.sock:ro"
-        - "my_proxy.conf:/etc/nginx/conf.d/my_proxy.conf:ro"
+        - "./myproxy.conf:/etc/nginx/conf.d/my_proxy.conf:ro"
       restart: "always"
       ports:
         - "80:80"
